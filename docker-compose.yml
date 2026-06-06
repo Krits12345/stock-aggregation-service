@@ -1,0 +1,68 @@
+# One-command stack for the assignment:
+#   docker compose up --build
+#
+# Brings up:
+#   - cassandra : single-node Apache Cassandra (port 9042)
+#   - loader    : waits for Cassandra, applies schema.cql, ingests the CSV (runs once, then exits)
+#   - api       : the Flask aggregation service (port 8080)
+#
+# After `up`, the API is available at http://localhost:8080
+# Swagger UI at http://localhost:8080/apidocs
+services:
+  cassandra:
+    image: cassandra:4.1
+    container_name: stock-cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=stock-cluster
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=128M
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+
+  loader:
+    build: ./server
+    container_name: stock-loader
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    environment:
+      - CASSANDRA_HOSTS=cassandra
+      - CASSANDRA_PORT=9042
+      - SCHEMA_FILE=/schema.cql
+    volumes:
+      - ./schema.cql:/schema.cql:ro
+      - ./data:/data:ro
+    command: >
+      sh -c "python apply_schema.py &&
+             python ingest.py --csv /data/stock_data.csv"
+    restart: "no"
+
+  api:
+    build: ./server
+    container_name: stock-api
+    depends_on:
+      loader:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      - CASSANDRA_HOSTS=cassandra
+      - CASSANDRA_PORT=9042
+      - CASSANDRA_KEYSPACE=stock_keyspace
+      - CACHE_TTL_SECONDS=60
+      - LOG_LEVEL=INFO
+      # auth (login/signup). Set REQUIRE_AUTH=true to also protect /api/v1/candles.
+      - JWT_SECRET=change-me-in-production
+      - JWT_TTL_HOURS=12
+      - REQUIRE_AUTH=false
+
+volumes:
+  cassandra-data:
