@@ -1,0 +1,55 @@
+# Defaults for local development. Every value can be overridden with an
+# environment variable (Spring relaxed binding), e.g. CASSANDRA_HOSTS,
+# CASSANDRA_PORT, CACHE_TTL_SECONDS, JWT_SECRET, APP_REQUIRE_AUTH.
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: stock-aggregation-server
+
+cassandra:
+  hosts: 127.0.0.1          # comma-separated for multiple contact points
+  port: 9042
+  keyspace: stock_keyspace
+  local-datacenter: datacenter1
+  username:                 # leave blank when auth is off
+  password:
+
+cache:
+  ttl-seconds: 60
+  max-size: 256
+
+jwt:
+  secret: dev-secret-change-me
+  ttl-hours: 12
+
+app:
+  # When true, /api/v1/candles also requires a bearer token. Off by default so
+  # the CLI client and the assignment's API contract keep working.
+  require-auth: false
+
+# Swagger UI lives at /apidocs.
+springdoc:
+  swagger-ui:
+    path: /apidocs
+
+logging:
+  level:
+    root: INFO
+    com.stockaggregator: INFO
+
+---
+# Loader profile: applies schema.cql and ingests the CSV, then exits.
+# Activated with --spring.profiles.active=loader. No web server.
+spring:
+  config:
+    activate:
+      on-profile: loader
+  main:
+    web-application-type: none
+
+loader:
+  csv: ../data/stock_data.csv
+  schema-file: ../schema.cql

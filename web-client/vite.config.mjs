@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-// The dev server proxies /api to the Flask service so the browser makes
+// The dev server proxies /api to the backend service so the browser makes
 // same-origin requests (no CORS juggling during development).
 export default defineConfig({
   plugins: [vue()],

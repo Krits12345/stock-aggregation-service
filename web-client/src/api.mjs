@@ -1,4 +1,4 @@
-// API wrapper. In dev, requests go to /api and Vite proxies them to Flask.
+// API wrapper. In dev, requests go to /api and Vite proxies them to the backend.
 // Override the base with VITE_API_BASE for a deployed backend.
 const BASE = import.meta.env.VITE_API_BASE || ''
 
